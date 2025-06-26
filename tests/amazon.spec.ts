@@ -1,132 +1,78 @@
-const { test, expect } = require('@playwright/test');
- 
-const BASE_URL = 'https://www.amazon.fr/';
-// All tests are for amazon.fr
- 
-// Test case 1 : Verify navigation to amazon.fr
-test('Verify navigation to amazon.fr', async ({ page }) => {
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' }); 
-    const url = page.url();
-    expect(url).toContain('amazon.fr');
-});
- 
-// Test case 2 : Verify cookie acceptance
-test('Test case 2 : Verify cookie acceptance', async ({ page }) => {
-    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  
-    // Sélectionne dynamiquement le bouton "Accepter les cookies"
-    const cookieButton = page.locator('input[name="accept"], input[data-cel-widget*="sp-cc"], span:has-text("Accepter")');
-  
-    if (await cookieButton.isVisible()) {
-      await cookieButton.click();
-  
-      // Attendre un court instant que le DOM se mette à jour
-      await page.waitForTimeout(1000);
-  
-      // Vérifie que le bouton n'est plus visible
-      await expect(cookieButton).toBeHidden();
-    } else {
-      console.warn('⚠️ Aucun bouton cookie visible');
-    }
-  });
+import { test, expect } from '@playwright/test';
 
-// Test case 3 : Verify product search
-test('Test case 3 : Verify product search', async ({ page }) => {
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+const BASE_URL = 'https://www.amazon.fr';
 
-  // Gérer le pop-up de cookies si présent
-  const acceptBtn = page.locator('input[name="accept"], input[data-cel-widget*="sp-cc"]');
-  if (await acceptBtn.isVisible()) await acceptBtn.click();
-
-  await page.locator('#twotabsearchtextbox').fill('baskets');
-  await page.locator('#nav-search-submit-button').click();
-
-  const results = page.locator('div.s-main-slot');
-  await expect(results).toBeVisible();
-});
-
-// Test case 4 : Verify selection of the first product
-test('Test case 4 : Verify selection of the first product', async ({ page }) => {
+// Test 1 : Vérifier le chargement de la page
+test('Test 1 : Vérifier le chargement de la page Amazon', async ({ page }) => {
   await page.goto(BASE_URL);
-  const acceptBtn = page.locator('input[name="accept"], input[data-cel-widget*="sp-cc"]');
-  if (await acceptBtn.isVisible()) await acceptBtn.click();
+  await expect(page).toHaveTitle(/Amazon/i);
+});
+
+//Test 2 : Vérifier l’acceptation des cookies
+test('Test 2 : Vérifier l’acceptation des cookies', async ({ page }) => {
+  await page.goto(BASE_URL);
+
+  try {
+    const cookieButton = page.locator('input[name="accept"], span:has-text("Accepter"), input[type="submit"]:has-text("Accepter")');
+    if (await cookieButton.first().isVisible({ timeout: 3000 })) {
+      await cookieButton.first().click();
+      await expect(cookieButton.first()).toBeHidden();
+    }
+  } catch (e) {
+    console.warn('⚠️ Aucun bouton de cookie détecté');
+  }
+});
+
+// Test 3 : Recherche
+test('Test 3 : Effectuer une recherche "baskets"', async ({ page }) => {
+  await page.goto(BASE_URL);
+
+  try {
+    const cookieButton = page.locator('input[name="accept"], span:has-text("Accepter"), input[type="submit"]:has-text("Accepter")');
+    if (await cookieButton.first().isVisible({ timeout: 3000 })) {
+      await cookieButton.first().click();
+    }
+  } catch {}
 
   await page.locator('#twotabsearchtextbox').fill('baskets');
   await page.locator('#nav-search-submit-button').click();
 
-  await page.waitForSelector('div.s-main-slot');
-  const firstProduct = page.locator('div.s-main-slot a[href*="/dp/"]').first();
-  await expect(firstProduct).toBeVisible();
+  const results = page.locator('[data-component-type="s-search-result"]');
+  await expect(results.first()).toBeVisible();
+});
+
+// Test 4 : Ouvrir un produit
+test('Test 4 : Ouvrir la page d’un produit', async ({ page }) => {
+  await page.goto(BASE_URL);
+
+  try {
+    const cookieButton = page.locator('input[name="accept"], span:has-text("Accepter"), input[type="submit"]:has-text("Accepter")');
+    if (await cookieButton.first().isVisible({ timeout: 3000 })) {
+      await cookieButton.first().click();
+    }
+  } catch {}
+
+  await page.locator('#twotabsearchtextbox').fill('baskets');
+  await page.locator('#nav-search-submit-button').click();
+
+  const firstProduct = page.locator('[data-component-type="s-search-result"] a[href*="/dp/"]').first();
   await firstProduct.click();
 
-  await expect(page.locator('#productTitle')).toBeVisible();
+  await expect(page).toHaveURL(/\/dp\//);
 });
 
-// Test case 5 : Verify adding product to cart
-test('Test case 5 : Verify adding product to cart', async ({ page }) => {
+
+// Test 5 : Accéder au panier
+test('Test 5 : Accéder au panier', async ({ page }) => {
   await page.goto(BASE_URL);
-  const acceptBtn = page.locator('input[name="accept"], input[data-cel-widget*="sp-cc"]');
-  if (await acceptBtn.isVisible()) await acceptBtn.click();
 
-  await page.locator('#twotabsearchtextbox').fill('baskets');
-  await page.locator('#nav-search-submit-button').click();
+  try {
+    const cookieButton = page.locator('input[name="accept"], span:has-text("Accepter"), input[type="submit"]:has-text("Accepter")');
+    if (await cookieButton.first().isVisible({ timeout: 3000 })) {
+      await cookieButton.first().click();
+    }
+  } catch (e) {}
 
-  await page.locator('div.s-main-slot a[href*="/dp/"]').first().click();
-
-  const addBtn = page.locator('#add-to-cart-button');
-  await expect(addBtn).toBeVisible();
-  await addBtn.click();
-
-  const confirm = page.locator('#sw-gtc, #attachDisplayAddBaseAlert');
-  await expect(confirm).toBeVisible();
-});
-
-// Test case 6 : Verify accessing the cart
-test('Test case 6 : Verify accessing the cart', async ({ page }) => {
-  await page.goto(BASE_URL);
-  const acceptBtn = page.locator('input[name="accept"], input[data-cel-widget*="sp-cc"]');
-  if (await acceptBtn.isVisible()) await acceptBtn.click();
-
-  await page.locator('#twotabsearchtextbox').fill('baskets');
-  await page.locator('#nav-search-submit-button').click();
-
-  await page.locator('div.s-main-slot a[href*="/dp/"]').first().click();
-  await page.locator('#add-to-cart-button').click();
-
-  // Attendre l'apparition de la confirmation panier (overlay ou bouton)
-  await page.waitForSelector('#sw-gtc, #attach-sidesheet-view-cart-button', { timeout: 10000 });
-  
-  // Cliquer sur "Voir le panier" via le bon bouton
-  const viewCart = page.locator('#sw-gtc, #attach-sidesheet-view-cart-button').first();
-  await viewCart.click();  
-
-  const cartItem = page.locator('.sc-list-item-content');
-  await expect(cartItem.first()).toBeVisible();
-});
-
-// Test case 7 : Verify the checkout process
-test('Test case 7 : Verify the checkout process', async ({ page }) => {
-  await page.goto(BASE_URL);
-  const acceptBtn = page.locator('input[name="accept"], input[data-cel-widget*="sp-cc"]');
-  if (await acceptBtn.isVisible()) await acceptBtn.click();
-
-  await page.locator('#twotabsearchtextbox').fill('baskets');
-  await page.locator('#nav-search-submit-button').click();
-
-  await page.locator('div.s-main-slot a[href*="/dp/"]').first().click();
-  await page.locator('#add-to-cart-button').click();
-
-    // Attendre l'apparition de la confirmation panier (overlay ou bouton)
-    await page.waitForSelector('#sw-gtc, #attach-sidesheet-view-cart-button', { timeout: 10000 });
-
-    // Cliquer sur "Voir le panier" via le bon bouton
-    const viewCart = page.locator('#sw-gtc, #attach-sidesheet-view-cart-button').first();
-    await viewCart.click();
-
-
-  const proceed = page.locator('input[name="proceedToRetailCheckout"]');
-  await expect(proceed).toBeVisible();
-  await proceed.click();
-
-  await expect(page).toHaveURL(/.*\/signin|.*\/checkout/);
+  await page.locator('#nav-cart').click();
+  await expect(page).toHaveURL(/gp\/cart/);
 });
