@@ -46,3 +46,41 @@ test('Test 5 : Accéder au panier', async ({ page }) => {
   await homePage.goToCart();
   await expect(page).toHaveURL(/gp\/cart/);
 });
+
+test('Test 6 : Ajouter un produit au panier', async ({ page }) => {
+  const homePage = new HomePage(page);
+  const searchResultsPage = new SearchResultsPage(page);
+  const productPage = new ProductPage(page);
+
+  await page.goto(BASE_URL);
+  await homePage.acceptCookies();
+  await homePage.searchProduct('ballon de foot');
+
+  await searchResultsPage.openFirstProduct();
+
+  await productPage.addToCart();
+
+  await productPage.verifyProductAddedToCart();
+});
+
+test('Test 7 : Vérifier le processus de paiement', async ({ page }) => {
+  const homePage = new HomePage(page);
+  const searchResultsPage = new SearchResultsPage(page);
+  const productPage = new ProductPage(page);
+
+  await page.goto(BASE_URL);
+  await homePage.acceptCookies();
+  await homePage.searchProduct('ballon de foot');
+  await searchResultsPage.openFirstProduct();
+  await productPage.addToCart();
+
+  await homePage.goToCart();
+  await expect(page).toHaveURL(/gp\/cart/);
+
+  const checkoutButton = page.locator('input[name="proceedToRetailCheckout"]');
+  await checkoutButton.click();
+
+  await expect(page).toHaveURL(/ap\/signin/);
+  const loginForm = page.locator('form[name="signIn"]');
+  await expect(loginForm).toBeVisible();
+});
